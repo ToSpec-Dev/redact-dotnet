@@ -1,0 +1,18 @@
+# .NET build output
+bin/
+obj/
+[Bb]in/
+[Oo]bj/
+
+# BenchmarkDotNet artifacts
+BenchmarkDotNet.Artifacts/
+
+# NuGet packed output
+*.nupkg
+*.snupkg
+
+# IDE / OS
+.vs/
+.idea/
+*.user
+.DS_Store

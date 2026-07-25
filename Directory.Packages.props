@@ -1,0 +1,24 @@
+<Project>
+
+  <!-- Central package management. This package's one runtime dependency is YamlDotNet
+       (ruleset source format is YAML; .NET has no built-in YAML parser). Everything
+       else here is test/benchmark tooling. Zero platform dependencies by design. -->
+
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Runtime -->
+    <PackageVersion Include="YamlDotNet" Version="16.3.0" />
+
+    <!-- Benchmarks -->
+    <PackageVersion Include="BenchmarkDotNet" Version="0.15.4" />
+
+    <!-- Tests -->
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.7.0" />
+    <PackageVersion Include="xunit.v3" Version="3.2.2" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
+  </ItemGroup>
+
+</Project>

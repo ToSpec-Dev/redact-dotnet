@@ -1,0 +1,44 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- ToSpec.Redact — the structured-first request/response redaction engine.
+       Zero platform dependencies: pure CPU over pooled buffers, one runtime
+       dependency (YamlDotNet, to compile the YAML ruleset source). The same code
+       runs at two enforcement points: the ToSpec capture gateway (cert path) and
+       inside a provider's process via the ToSpec SDK (prod path). -->
+
+  <PropertyGroup>
+    <RootNamespace>ToSpec.Redact</RootNamespace>
+    <AssemblyName>ToSpec.Redact</AssemblyName>
+
+    <!-- NuGet package metadata (public, Apache-2.0). -->
+    <IsPackable>true</IsPackable>
+    <PackageId>ToSpec.Redact</PackageId>
+    <Version>1.0.2</Version>
+    <Authors>ToSpec</Authors>
+    <Company>ToSpec</Company>
+    <Description>Structured-first (JSON/XML) request/response redaction engine: streaming path-trie redaction with deterministic HMAC tokenization, shape-preserving masking, and a Luhn-validated PAN / PII detector layer. Zero platform dependencies.</Description>
+    <PackageTags>redaction;pii;pan;privacy;json;xml;security;tokenization</PackageTags>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/ToSpec-Dev/redact-dotnet</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/ToSpec-Dev/redact-dotnet</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="YamlDotNet" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="../../README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <Target Name="RequireCleanPackProvenance" BeforeTargets="GenerateNuspec" Condition="'$(AllowDirtyPack)' != 'true'">
+    <Exec Command="bash &quot;$(MSBuildProjectDirectory)/../../scripts/ensure-clean-pack.sh&quot;" />
+  </Target>
+
+</Project>

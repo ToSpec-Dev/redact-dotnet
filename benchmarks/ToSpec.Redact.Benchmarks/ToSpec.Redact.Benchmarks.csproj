@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Redaction throughput harness. Run locally in Release; the ≥200 MB/s-per-core
+       target and results table are recorded in the repo README. Built like any
+       project; not meant to run in CI. -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" />
+    <ProjectReference Include="..\..\src\ToSpec.Redact\ToSpec.Redact.csproj" />
+  </ItemGroup>
+
+</Project>
