@@ -13,7 +13,7 @@
     <!-- NuGet package metadata (public, Apache-2.0). -->
     <IsPackable>true</IsPackable>
     <PackageId>ToSpec.Redact</PackageId>
-    <Version>1.1.0</Version>
+    <Version>1.1.1</Version>
     <Authors>ToSpec</Authors>
     <Company>ToSpec</Company>
     <Description>Structured-first (JSON/XML) request/response redaction engine: streaming path-trie redaction with deterministic HMAC tokenization, shape-preserving masking, and a Luhn-validated PAN / PII detector layer. Zero platform dependencies.</Description>
@@ -27,6 +27,18 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+
+    <!-- Path-independent output, which is what makes a Release build actually
+         REPRODUCIBLE rather than merely deterministic. Without this, SourceRoot is not
+         normalized and each build embeds its own absolute source paths, so the same
+         commit packed from /home/alice/redact-dotnet and /build/redact-dotnet yields
+         different assembly bytes. A consumer therefore cannot verify that the binary
+         they were handed came from the source it names — they rebuild, get a different
+         hash, and cannot tell "built elsewhere" from "built from something else".
+         That was the state when this was measured: byte-identical when rebuilt in situ,
+         different from a fresh worktree (ToSpec security review 2026-08-04, SEC-8).
+         Release only, so local iterative builds keep their real paths for debugging. -->
+    <ContinuousIntegrationBuild Condition="'$(Configuration)' == 'Release'">true</ContinuousIntegrationBuild>
   </PropertyGroup>
 
   <ItemGroup>
