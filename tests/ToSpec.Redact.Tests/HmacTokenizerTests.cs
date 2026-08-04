@@ -44,4 +44,35 @@ public sealed class HmacTokenizerTests
         Assert.StartsWith("tsr_v1_", first, StringComparison.Ordinal);
         Assert.StartsWith("tsr_v2_", second, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void TokenizeTo_AgreesWithStringForm_AndReportsLength()
+    {
+        var keyring = new RedactionKeyring(RandomNumberGenerator.GetBytes(32), hmacKeyVersion: 7);
+        byte[] value = Encoding.UTF8.GetBytes("res-8842");
+
+        Span<char> destination = stackalloc char[HmacTokenizer.MaxTokenLength];
+        int written = HmacTokenizer.TokenizeTo(value, keyring, destination);
+
+        Assert.Equal(HmacTokenizer.Tokenize(value, keyring), new string(destination[..written]));
+    }
+
+    [Fact]
+    public void TokenizeTo_SwitchingKeys_NeverServesTheStaleHmacState()
+    {
+        // The per-thread keyed-HMAC cache (1.1.0) keys on key CONTENT: alternating
+        // keyrings — including a fresh instance carrying the same bytes — must
+        // yield exactly the tokens a cold HMAC would.
+        byte[] keyA = RandomNumberGenerator.GetBytes(32);
+        byte[] keyB = RandomNumberGenerator.GetBytes(32);
+        byte[] value = Encoding.UTF8.GetBytes("stay-2026-08-03");
+        string expectedA = $"tsr_v1_{Base32.Encode(HMACSHA256.HashData(keyA, value))}";
+        string expectedB = $"tsr_v1_{Base32.Encode(HMACSHA256.HashData(keyB, value))}";
+
+        for (int round = 0; round < 3; round++)
+        {
+            Assert.Equal(expectedA, HmacTokenizer.Tokenize(value, new RedactionKeyring(keyA, 1)));
+            Assert.Equal(expectedB, HmacTokenizer.Tokenize(value, new RedactionKeyring(keyB, 1)));
+        }
+    }
 }

@@ -145,10 +145,16 @@ buying throughput by increasing host memory pressure. The **< 1 ms p99 for bodie
 target holds for every
 shape (the worst ≤64 KB case, hash-heavy Typical at 64 KB, is 0.41 ms). Pure traversal
 and detector-scan throughput clear **200 MB/s per core** comfortably (~420–550 MB/s).
-The Typical shape here is allocation-bound at ~150 MB/s because it hashes every element
-of the grown `items[]` array — each token is a fresh string; a production body with a
-handful of matched fields sits far closer to the NoMatch traversal cost. These are
-`ShortRun` dev-laptop numbers, not a tuned server measurement; treat them as a floor.
+The Typical shape was allocation-bound at ~150 MB/s because it hashed every element
+of the grown `items[]` array into a fresh token string. **1.1.0 removed that cost**
+(`HmacTokenizer.TokenizeTo` span emission + per-thread keyed-HMAC reuse): measured on a
+server-class AMD EPYC-Rome core (ShortRun, 2026-08-03), Typical went from 27.4 ms /
+1.24 MB allocated per 1 MB payload to **14.1 ms / 264 B** (1.9x, allocations flat), and
+ScanHeavy gained ~1.4x from the HMAC reuse alone. Typical is now compute-bound (trie
+descent + HMAC) at ~74 MB/s on that core — still short of the 200 MB/s target on server
+hardware, which the platform's sizing (SPEC-infrastructure §2.4) should assume until the
+traversal cost is next attacked. The Apple-Silicon table above predates 1.1.0. These are
+`ShortRun` numbers, not a tuned server measurement; treat them as a floor.
 The engine does not start worker threads or move redaction to background CPU; callers who
 need to keep request handling isolated should run it on their existing forwarding path
 and size that path from the `Mean`/allocation numbers above.

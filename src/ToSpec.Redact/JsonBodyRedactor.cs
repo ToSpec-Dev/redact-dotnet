@@ -402,7 +402,10 @@ public sealed class JsonBodyRedactor : IBodyRedactor
                 case RedactionAction.TokenizeTyped:
                 {
                     ReadOnlySpan<byte> value = ReadBytes(ref reader);
-                    writer.WriteStringValue(HmacTokenizer.Tokenize(value, keys));
+                    // Emitted via the span form: no token string per hashed value
+                    // (the known Typical-shape allocation cost; platform perf review P2).
+                    Span<char> token = stackalloc char[HmacTokenizer.MaxTokenLength];
+                    writer.WriteStringValue(token[..HmacTokenizer.TokenizeTo(value, keys, token)]);
                     _redacted++;
                     return;
                 }
@@ -453,10 +456,15 @@ public sealed class JsonBodyRedactor : IBodyRedactor
             {
                 case RedactionAction.Hash:
                 case RedactionAction.TokenizeTyped:
-                    // Token over the literal JSON text (documented on HmacTokenizer).
-                    writer.WriteStringValue(HmacTokenizer.Tokenize(RawLiteral(ref reader), keys));
+                {
+                    // Token over the literal JSON text (documented on HmacTokenizer),
+                    // emitted via the span form — no token string per hashed value.
+                    Span<char> token = stackalloc char[HmacTokenizer.MaxTokenLength];
+                    writer.WriteStringValue(
+                        token[..HmacTokenizer.TokenizeTo(RawLiteral(ref reader), keys, token)]);
                     _redacted++;
                     return;
+                }
 
                 case RedactionAction.Mask:
                     // Type-shape preserved, value gone.

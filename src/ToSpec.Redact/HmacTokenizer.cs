@@ -18,26 +18,69 @@ public static class HmacTokenizer
     private const int DigestBase32Length = 52;
     private const int StackUtf8Bytes = 1024;
 
+    /// <summary>Upper bound of any token's length in chars: the prefix, at most
+    /// 10 version digits, <c>_</c>, and 52 base32 chars. Size
+    /// <see cref="TokenizeTo"/> destinations with this.</summary>
+    public const int MaxTokenLength = 5 + 10 + 1 + DigestBase32Length;
+
+    // One keyed HMAC state per thread, reset between values instead of re-deriving
+    // the key schedule (two SHA-256 block passes) on every token. Keyed on key
+    // CONTENT, not keyring identity — consumers may build a fresh keyring per
+    // pass — and the 32-byte compare per token is noise next to the digest.
+    // Thread-affine, so no locking; the instance lives for the thread's lifetime.
+    [ThreadStatic]
+    private static byte[]? _cachedKey;
+
+    [ThreadStatic]
+    private static IncrementalHash? _cachedHmac;
+
     public static string Tokenize(ReadOnlySpan<byte> valueUtf8, RedactionKeyring keys)
+    {
+        Span<char> token = stackalloc char[MaxTokenLength];
+        return new string(token[..TokenizeTo(valueUtf8, keys, token)]);
+    }
+
+    /// <summary>Writes the token for <paramref name="valueUtf8"/> into
+    /// <paramref name="destination"/> (sized by <see cref="MaxTokenLength"/>) and
+    /// returns the chars written — the allocation-free form the streaming
+    /// redactors emit through directly. A body hashing every element of a grown
+    /// array previously allocated one fresh token string per element (the README's
+    /// known Typical-shape cost; platform perf review P2).</summary>
+    public static int TokenizeTo(ReadOnlySpan<byte> valueUtf8, RedactionKeyring keys, Span<char> destination)
     {
         ArgumentNullException.ThrowIfNull(keys);
 
         Span<byte> digest = stackalloc byte[HMACSHA256.HashSizeInBytes];
-        HMACSHA256.HashData(keys.HmacKey, valueUtf8, digest);
+        IncrementalHash hmac = KeyedHmac(keys);
+        hmac.AppendData(valueUtf8);
+        if (!hmac.TryGetHashAndReset(digest, out _))
+        {
+            throw new InvalidOperationException("failed to compute the token digest.");
+        }
 
-        int versionDigits = CountDigits(keys.HmacKeyVersion);
-        Span<char> token = stackalloc char[TokenPrefix.Length + versionDigits + 1 + DigestBase32Length];
-        TokenPrefix.AsSpan().CopyTo(token);
+        TokenPrefix.AsSpan().CopyTo(destination);
         int written = TokenPrefix.Length;
-        if (!keys.HmacKeyVersion.TryFormat(token[written..], out int formatted))
+        if (!keys.HmacKeyVersion.TryFormat(destination[written..], out int formatted))
         {
             throw new InvalidOperationException("failed to format HMAC key version.");
         }
 
         written += formatted;
-        token[written++] = '_';
-        written += Base32.EncodeTo(digest, token[written..]);
-        return new string(token[..written]);
+        destination[written++] = '_';
+        written += Base32.EncodeTo(digest, destination[written..]);
+        return written;
+    }
+
+    private static IncrementalHash KeyedHmac(RedactionKeyring keys)
+    {
+        if (_cachedKey is null || !keys.HmacKey.SequenceEqual(_cachedKey))
+        {
+            _cachedHmac?.Dispose();
+            _cachedHmac = IncrementalHash.CreateHMAC(HashAlgorithmName.SHA256, keys.HmacKey);
+            _cachedKey = keys.HmacKey.ToArray();
+        }
+
+        return _cachedHmac!;
     }
 
     public static string Tokenize(ReadOnlySpan<char> value, RedactionKeyring keys)
@@ -62,15 +105,4 @@ public static class HmacTokenizer
         }
     }
 
-    private static int CountDigits(int value)
-    {
-        int digits = 1;
-        while (value >= 10)
-        {
-            value /= 10;
-            digits++;
-        }
-
-        return digits;
-    }
 }

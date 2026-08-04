@@ -13,7 +13,7 @@
     <!-- NuGet package metadata (public, Apache-2.0). -->
     <IsPackable>true</IsPackable>
     <PackageId>ToSpec.Redact</PackageId>
-    <Version>1.0.2</Version>
+    <Version>1.1.0</Version>
     <Authors>ToSpec</Authors>
     <Company>ToSpec</Company>
     <Description>Structured-first (JSON/XML) request/response redaction engine: streaming path-trie redaction with deterministic HMAC tokenization, shape-preserving masking, and a Luhn-validated PAN / PII detector layer. Zero platform dependencies.</Description>
