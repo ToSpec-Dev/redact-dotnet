@@ -168,6 +168,39 @@ dotnet test
 
 Requires the .NET 10 SDK (pinned in `global.json`).
 
+## Reproducible releases
+
+Release packages are **reproducible**: packing a given tag produces a byte-identical
+`lib/net10.0/ToSpec.Redact.dll` regardless of where the repository is checked out. That
+matters for a redaction engine — if you cannot rebuild the binary you were handed, you
+cannot confirm it is the code you are reading.
+
+Two properties make it work:
+
+- `ContinuousIntegrationBuild` on Release normalizes embedded source paths. Without it a
+  build is deterministic but *not* reproducible: identical in place, different from any
+  other directory — so a verifier gets a mismatch and cannot tell "built elsewhere" from
+  "built from something else".
+- Packing refuses a dirty worktree (`scripts/ensure-clean-pack.sh`), because the nuspec
+  stamps a commit id and a dirty pack would name sources it was not built from.
+
+To verify a package you have:
+
+```sh
+git checkout vX.Y.Z
+dotnet pack src/ToSpec.Redact/ToSpec.Redact.csproj -c Release -o /tmp/out
+unzip -p /tmp/out/ToSpec.Redact.X.Y.Z.nupkg 'lib/net10.0/ToSpec.Redact.dll' | sha256sum
+```
+
+Compare against the sha256 recorded in the annotated tag (`git tag -n99 vX.Y.Z`). Compare
+the **assembly**, not the `.nupkg` — zip entry timestamps differ between packs, so the
+archive is never byte-stable even when the build is.
+
+The tag carries that hash rather than the release commit message, and that is forced
+rather than stylistic: SourceLink embeds the commit id in the binary, so the assembly's
+hash depends on the commit message. A commit cannot state the hash of an artifact whose
+inputs include that commit.
+
 ## License
 
 [Apache-2.0](LICENSE).
