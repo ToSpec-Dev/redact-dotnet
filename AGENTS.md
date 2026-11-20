@@ -1,4 +1,4 @@
-# CLAUDE.md — repo conventions for ToSpec.Redact
+# AGENTS.md — repo conventions for ToSpec.Redact
 
 `ToSpec.Redact` is the **structured-first request/response redaction engine** used by
 the ToSpec certification platform at two enforcement points: the capture gateway (cert
